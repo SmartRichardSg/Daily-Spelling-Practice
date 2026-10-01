@@ -16,6 +16,10 @@
 .controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:0;border-radius:12px;padding:13px 16px;font-size:16px;font-weight:700;cursor:pointer}button:active{transform:scale(.98)}
 .primary{background:var(--blue);color:white}.secondary{background:#eef2f7;color:#263247}.success{background:#e7f7ee;color:var(--green)}.danger{background:#fdecec;color:var(--red)}
 input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);border-radius:13px;text-align:center;outline:none}input:focus{border-color:var(--blue)}
+.answerDisplay{min-height:58px;margin-top:8px;border:2px solid var(--border);border-radius:13px;background:#fff;padding:12px 10px;text-align:center;font-size:28px;font-weight:800;letter-spacing:.06em;word-break:break-all}
+.spellingKeyboard{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:12px}
+.spellingKeyboard button{padding:11px 5px;background:#eef2f7;color:#172033;border:1px solid #dbe2ea;font-size:18px}
+.spellingKeyboard button:active{background:#dce7fb}
 .label{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.answer{display:none;margin-top:16px;padding:16px;border-radius:13px;text-align:center;background:#f5f7fa}.answer.show{display:block}.correctword{font-size:28px;font-weight:800;margin:5px 0 12px}.result{font-weight:700}.actions{display:flex;gap:10px;margin-top:14px}.actions button{flex:1}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{text-align:center;background:#f7f9fc;border-radius:13px;padding:12px 5px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
 .small{font-size:13px;color:var(--muted)}details summary{cursor:pointer;font-weight:700}.wordlist{margin:10px 0 0;padding-left:20px}
@@ -29,9 +33,15 @@ input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);bord
 <div class="card"><div class="toprow"><span class="badge" id="dateBadge">Today</span><span class="small" id="scoreText">0 / 0 correct</span></div><div class="progress"><span id="progressBar"></span></div></div>
 
 <div class="card">
-<div class="wordbox"><div class="number" id="wordNumber">Word 1 of 10</div><div class="instruction">Listen to the word, then spell it.</div>
+<div class="wordbox"><div class="number" id="wordNumber">Word 1 of 10</div><div class="instruction">Listen to the word, then spell it using the letters below.</div>
 <div class="controls"><button class="primary" id="speakBtn">🔊 Speak Word</button><button class="secondary" id="slowBtn">🐢 Slow</button></div></div>
-<div class="label">Your spelling</div><input id="answerInput" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type the spelling here">
+<div class="label">Your spelling</div>
+<div id="answerDisplay" class="answerDisplay" aria-label="Your spelling"></div>
+<div class="spellingKeyboard" id="spellingKeyboard"></div>
+<div class="actions">
+  <button class="secondary" id="backspaceBtn">⌫ Backspace</button>
+  <button class="secondary" id="clearBtn">Clear</button>
+</div>
 <div class="actions"><button class="primary" id="revealBtn">Reveal Spelling</button></div>
 <div class="answer" id="answerBox"><div class="label">Correct spelling</div><div class="correctword" id="correctWord"></div><div class="result" id="resultText"></div>
 <div class="actions"><button class="success" id="correctBtn">✓ I Got It Right</button><button class="danger" id="wrongBtn">✗ I Got It Wrong</button></div>
@@ -62,7 +72,8 @@ const WORD_BANK=[
 const KEY="SPELLING_PRACTICE_V1";
 let state=JSON.parse(localStorage.getItem(KEY)||"null")||{};
 const todayKey=localDateKey();
-if(state.date!==todayKey){state={date:todayKey,words:makeDailyWords(todayKey),index:0,results:{}};save();}
+if(state.date!==todayKey){state={date:todayKey,words:makeDailyWords(todayKey),index:0,results:{},typed:""};save();}
+if(typeof state.typed!=="string") state.typed="";
 let currentRevealed=false;
 function localDateKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
@@ -74,16 +85,25 @@ function render(){
  document.getElementById("dateBadge").textContent=new Date().toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
  document.getElementById("wordNumber").textContent=`Word ${i+1} of 10`;document.getElementById("progressBar").style.width=((i+1)*10)+"%";
  document.getElementById("scoreText").textContent=`${c} / ${done} correct`;document.getElementById("statCorrect").textContent=c;document.getElementById("statWrong").textContent=done-c;document.getElementById("statPercent").textContent=done?Math.round(c/done*100)+"%":"0%";
- document.getElementById("answerInput").value="";document.getElementById("answerInput").disabled=!!r;document.getElementById("answerBox").classList.toggle("show",!!r||currentRevealed);
+ state.typed = r ? r.typed : ""; document.getElementById("answerDisplay").textContent=state.typed||"Tap letters below to spell the word"; document.getElementById("answerBox").classList.toggle("show",!!r||currentRevealed);
  document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=r?(r.correct?"Correct! Well done.":"Not quite — practise this spelling."):"";
  document.getElementById("correctBtn").style.display=r?"none":"block";document.getElementById("wrongBtn").style.display=r?"none":"block";document.getElementById("nextBtn").textContent=i===9?"Finish Today's Test →":"Next Word →";
  document.getElementById("wordList").innerHTML=state.words.map(x=>`<li>${x}</li>`).join("");currentRevealed=!!r;
 }
-function reveal(){let input=document.getElementById("answerInput"),typed=input.value.trim().toLowerCase();if(!typed){alert("Type your spelling first, then reveal the answer.");input.focus();return}let w=state.words[state.index];currentRevealed=true;document.getElementById("answerBox").classList.add("show");document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=typed===w.toLowerCase()?"Your spelling matches the answer!":"Compare your spelling with the correct answer."}
-function mark(correct){state.results[state.index]={correct,typed:document.getElementById("answerInput").value.trim()};save();render()}
+function reveal(){let typed=(state.typed||"").trim().toLowerCase();if(!typed){alert("Spell the word first, then reveal the answer.");return}let w=state.words[state.index];currentRevealed=true;document.getElementById("answerBox").classList.add("show");document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=typed===w.toLowerCase()?"Your spelling matches the answer!":"Compare your spelling with the correct answer."}
+function mark(correct){state.results[state.index]={correct,typed:state.typed||""};delete state.typed;save();render()}
 function next(){if(!state.results[state.index]){alert("Please reveal the spelling and mark whether you got it right.");return}if(state.index<9){state.index++;save();render();speak()}else{let c=Object.values(state.results).filter(x=>x.correct).length;alert(`Today's spelling test is complete!\n\nScore: ${c}/10 (${c*10}%)\n\nCome back tomorrow for 10 new words.`)}}
 document.getElementById("speakBtn").onclick=()=>speak(.85);document.getElementById("slowBtn").onclick=()=>speak(.55);document.getElementById("revealBtn").onclick=reveal;document.getElementById("correctBtn").onclick=()=>mark(true);document.getElementById("wrongBtn").onclick=()=>mark(false);document.getElementById("nextBtn").onclick=next;
-document.getElementById("answerInput").addEventListener("keydown",e=>{if(e.key==="Enter")reveal()});render();
+const keyboard=document.getElementById("spellingKeyboard");
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(letter=>{
+  const b=document.createElement("button"); b.type="button"; b.textContent=letter;
+  b.onclick=()=>{ if(state.results[state.index]) return; state.typed=(state.typed||"")+letter.toLowerCase(); updateAnswerDisplay(); };
+  keyboard.appendChild(b);
+});
+function updateAnswerDisplay(){document.getElementById("answerDisplay").textContent=state.typed||"Tap letters below to spell the word";}
+document.getElementById("backspaceBtn").onclick=()=>{if(state.results[state.index])return;state.typed=(state.typed||"").slice(0,-1);updateAnswerDisplay()};
+document.getElementById("clearBtn").onclick=()=>{if(state.results[state.index])return;state.typed="";updateAnswerDisplay()};
+render();
 </script>
 </body>
 </html>
