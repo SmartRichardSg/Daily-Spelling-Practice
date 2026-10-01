@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Daily Spelling Practice</title>
+<style>
+:root{--blue:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#667085;--border:#dbe2ea;--green:#14804a;--red:#c62828}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text)}
+.app{max-width:720px;margin:auto;padding:18px 14px 40px}header{text-align:center;padding:10px 0 18px}.icon{font-size:42px}.title{font-size:30px;font-weight:800;margin:4px 0}.subtitle{color:var(--muted);font-size:15px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 3px 14px rgba(20,30,50,.05)}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:10px}.badge{background:#e8f0ff;color:var(--blue);padding:7px 11px;border-radius:999px;font-weight:700;font-size:13px}
+.progress{height:8px;background:#e7ebf1;border-radius:99px;overflow:hidden;margin:15px 0}.progress span{display:block;height:100%;background:var(--blue);width:10%;transition:.25s}
+.wordbox{text-align:center;padding:18px 8px}.wordbox .number{font-size:14px;color:var(--muted);margin-bottom:12px}.wordbox .instruction{font-size:18px;font-weight:700;margin-bottom:16px}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:0;border-radius:12px;padding:13px 16px;font-size:16px;font-weight:700;cursor:pointer}button:active{transform:scale(.98)}
+.primary{background:var(--blue);color:white}.secondary{background:#eef2f7;color:#263247}.success{background:#e7f7ee;color:var(--green)}.danger{background:#fdecec;color:var(--red)}
+input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);border-radius:13px;text-align:center;outline:none}input:focus{border-color:var(--blue)}
+.label{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.answer{display:none;margin-top:16px;padding:16px;border-radius:13px;text-align:center;background:#f5f7fa}.answer.show{display:block}.correctword{font-size:28px;font-weight:800;margin:5px 0 12px}.result{font-weight:700}.actions{display:flex;gap:10px;margin-top:14px}.actions button{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{text-align:center;background:#f7f9fc;border-radius:13px;padding:12px 5px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
+.small{font-size:13px;color:var(--muted)}details summary{cursor:pointer;font-weight:700}.wordlist{margin:10px 0 0;padding-left:20px}
+@media(max-width:480px){.title{font-size:27px}.stats{gap:6px}.stat b{font-size:19px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="icon">📝</div><div class="title">Daily Spelling Practice</div><div class="subtitle">10 commonly used but difficult-to-spell words every day</div></header>
+
+<div class="card"><div class="toprow"><span class="badge" id="dateBadge">Today</span><span class="small" id="scoreText">0 / 0 correct</span></div><div class="progress"><span id="progressBar"></span></div></div>
+
+<div class="card">
+<div class="wordbox"><div class="number" id="wordNumber">Word 1 of 10</div><div class="instruction">Listen to the word, then spell it.</div>
+<div class="controls"><button class="primary" id="speakBtn">🔊 Speak Word</button><button class="secondary" id="slowBtn">🐢 Slow</button></div></div>
+<div class="label">Your spelling</div><input id="answerInput" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type the spelling here">
+<div class="actions"><button class="primary" id="revealBtn">Reveal Spelling</button></div>
+<div class="answer" id="answerBox"><div class="label">Correct spelling</div><div class="correctword" id="correctWord"></div><div class="result" id="resultText"></div>
+<div class="actions"><button class="success" id="correctBtn">✓ I Got It Right</button><button class="danger" id="wrongBtn">✗ I Got It Wrong</button></div>
+<div class="actions"><button class="secondary" id="nextBtn">Next Word →</button></div></div>
+</div>
+
+<div class="card"><div class="label">Today's progress</div><div class="stats"><div class="stat"><b id="statCorrect">0</b><span>Correct</span></div><div class="stat"><b id="statWrong">0</b><span>Need Practice</span></div><div class="stat"><b id="statPercent">0%</b><span>Score</span></div></div></div>
+
+<div class="card"><details><summary>📚 Today's words</summary><p class="small">The words are hidden until you choose to look. Use this for review.</p><ol class="wordlist" id="wordList"></ol></details></div>
+<div class="card"><div class="label">Study tip</div><p class="small">Say the word aloud, type it from memory, reveal the answer, then say the correct spelling aloud. Words you miss are worth practising again.</p><p class="small" id="savedText"></p></div>
+</div>
+
+<script>
+const WORD_BANK=[
+"accommodate","achievement","apparently","argument","beautiful","beginning","business","calendar","category","cemetery",
+"committee","conscience","conscious","definitely","description","different","embarrass","environment","especially","existence",
+"experience","familiar","February","foreign","government","guarantee","harass","immediately","independent","knowledge",
+"library","maintenance","necessary","occasion","occurred","opportunity","parallel","perseverance","personnel","privilege",
+"probably","professional","pronunciation","questionnaire","receive","recommend","restaurant","rhythm","schedule","separate",
+"successful","surprise","tomorrow","truly","unfortunately","vacuum","vegetable","Wednesday","weird","whether",
+"absence","acceptable","accessible","accidentally","ancient","analyze","anxiety","appearance","audience","available",
+"awkward","breathe","broccoli","bureaucracy","candidate","colleague","column","convenient","curiosity","desperate",
+"discipline","disappoint","dilemma","disappear","exaggerate","excellent","fascinating","fluorescent","grateful","humorous",
+"identity","incidentally","intelligence","jealous","leisure","liaison","lightning","mischievous","noticeable","occasionally",
+"permanent","persuade","possibility","precede","principal","principle","relevant","reliable","responsible","sincerely",
+"strength","thorough","threshold","twelfth","unnecessary","withdraw","guarantee","separate","restaurant","privilege"
+];
+const KEY="SPELLING_PRACTICE_V1";
+let state=JSON.parse(localStorage.getItem(KEY)||"null")||{};
+const todayKey=localDateKey();
+if(state.date!==todayKey){state={date:todayKey,words:makeDailyWords(todayKey),index:0,results:{}};save();}
+let currentRevealed=false;
+function localDateKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function makeDailyWords(seed){let a=WORD_BANK.slice(),x=hash(seed);for(let i=a.length-1;i>0;i--){x=(Math.imul(x,1664525)+1013904223)>>>0;let j=x%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,10)}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function speak(rate=.85){if(!("speechSynthesis"in window)){alert("Speech is not supported by this browser.");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(state.words[state.index]);u.rate=rate;u.pitch=1;u.lang="en-US";speechSynthesis.speak(u)}
+function render(){
+ const i=state.index,w=state.words[i],r=state.results[i],done=Object.keys(state.results).length,c=Object.values(state.results).filter(x=>x.correct).length;
+ document.getElementById("dateBadge").textContent=new Date().toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+ document.getElementById("wordNumber").textContent=`Word ${i+1} of 10`;document.getElementById("progressBar").style.width=((i+1)*10)+"%";
+ document.getElementById("scoreText").textContent=`${c} / ${done} correct`;document.getElementById("statCorrect").textContent=c;document.getElementById("statWrong").textContent=done-c;document.getElementById("statPercent").textContent=done?Math.round(c/done*100)+"%":"0%";
+ document.getElementById("answerInput").value="";document.getElementById("answerInput").disabled=!!r;document.getElementById("answerBox").classList.toggle("show",!!r||currentRevealed);
+ document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=r?(r.correct?"Correct! Well done.":"Not quite — practise this spelling."):"";
+ document.getElementById("correctBtn").style.display=r?"none":"block";document.getElementById("wrongBtn").style.display=r?"none":"block";document.getElementById("nextBtn").textContent=i===9?"Finish Today's Test →":"Next Word →";
+ document.getElementById("wordList").innerHTML=state.words.map(x=>`<li>${x}</li>`).join("");currentRevealed=!!r;
+}
+function reveal(){let input=document.getElementById("answerInput"),typed=input.value.trim().toLowerCase();if(!typed){alert("Type your spelling first, then reveal the answer.");input.focus();return}let w=state.words[state.index];currentRevealed=true;document.getElementById("answerBox").classList.add("show");document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=typed===w.toLowerCase()?"Your spelling matches the answer!":"Compare your spelling with the correct answer."}
+function mark(correct){state.results[state.index]={correct,typed:document.getElementById("answerInput").value.trim()};save();render()}
+function next(){if(!state.results[state.index]){alert("Please reveal the spelling and mark whether you got it right.");return}if(state.index<9){state.index++;save();render();speak()}else{let c=Object.values(state.results).filter(x=>x.correct).length;alert(`Today's spelling test is complete!\n\nScore: ${c}/10 (${c*10}%)\n\nCome back tomorrow for 10 new words.`)}}
+document.getElementById("speakBtn").onclick=()=>speak(.85);document.getElementById("slowBtn").onclick=()=>speak(.55);document.getElementById("revealBtn").onclick=reveal;document.getElementById("correctBtn").onclick=()=>mark(true);document.getElementById("wrongBtn").onclick=()=>mark(false);document.getElementById("nextBtn").onclick=next;
+document.getElementById("answerInput").addEventListener("keydown",e=>{if(e.key==="Enter")reveal()});render();
+</script>
+</body>
+</html>
