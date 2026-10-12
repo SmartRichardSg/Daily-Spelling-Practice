@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/%3E%3Ctext x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22white%22%3EA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Daily Spelling Practice</title>
 <style>
 :root{--blue:#2563eb;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#667085;--border:#dbe2ea;--green:#14804a;--red:#c62828}
@@ -17,9 +19,10 @@
 .primary{background:var(--blue);color:white}.secondary{background:#eef2f7;color:#263247}.success{background:#e7f7ee;color:var(--green)}.danger{background:#fdecec;color:var(--red)}
 input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);border-radius:13px;text-align:center;outline:none}input:focus{border-color:var(--blue)}
 .answerDisplay{min-height:58px;margin-top:8px;border:2px solid var(--border);border-radius:13px;background:#fff;padding:12px 10px;text-align:center;font-size:28px;font-weight:800;letter-spacing:.06em;word-break:break-all}
-.spellingKeyboard{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:12px}
-.spellingKeyboard button{padding:11px 5px;background:#eef2f7;color:#172033;border:1px solid #dbe2ea;font-size:18px}
-.spellingKeyboard button:active{background:#dce7fb}
+.voiceStatus{margin-top:10px;min-height:24px;text-align:center;font-size:14px;color:var(--muted)}
+.voiceStatus.error{color:var(--red)}.voiceStatus.good{color:var(--green)}
+.voiceControls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.voiceControls button{flex:1;min-width:130px}
+.voiceHelp{font-size:13px;color:var(--muted);line-height:1.5;margin-top:10px}
 .label{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.answer{display:none;margin-top:16px;padding:16px;border-radius:13px;text-align:center;background:#f5f7fa}.answer.show{display:block}.correctword{font-size:28px;font-weight:800;margin:5px 0 12px}.result{font-weight:700}.actions{display:flex;gap:10px;margin-top:14px}.actions button{flex:1}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{text-align:center;background:#f7f9fc;border-radius:13px;padding:12px 5px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
 .small{font-size:13px;color:var(--muted)}details summary{cursor:pointer;font-weight:700}.wordlist{margin:10px 0 0;padding-left:20px}
@@ -33,15 +36,13 @@ input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);bord
 <div class="card"><div class="toprow"><span class="badge" id="dateBadge">Today</span><span class="small" id="scoreText">0 / 0 correct</span></div><div class="progress"><span id="progressBar"></span></div></div>
 
 <div class="card">
-<div class="wordbox"><div class="number" id="wordNumber">Word 1 of 10</div><div class="instruction">Listen to the word, then spell it using the letters below.</div>
+<div class="wordbox"><div class="number" id="wordNumber">Word 1 of 10</div><div class="instruction">Listen to the word, then spell it aloud one letter at a time.</div>
 <div class="controls"><button class="primary" id="speakBtn">🔊 Speak Word</button><button class="secondary" id="slowBtn">🐢 Slow</button></div></div>
 <div class="label">Your spelling</div>
-<div id="answerDisplay" class="answerDisplay" aria-label="Your spelling"></div>
-<div class="spellingKeyboard" id="spellingKeyboard"></div>
-<div class="actions">
-  <button class="secondary" id="backspaceBtn">⌫ Backspace</button>
-  <button class="secondary" id="clearBtn">Clear</button>
-</div>
+<div id="answerDisplay" class="answerDisplay" aria-live="polite" aria-label="Your spoken spelling">Your spoken letters will appear here</div>
+<div class="voiceControls"><button class="primary" id="micBtn">🎤 Start Spelling</button><button class="secondary" id="clearBtn">Clear Answer</button></div>
+<div class="voiceStatus" id="voiceStatus" aria-live="polite">Tap the microphone, then say each letter separately.</div>
+<p class="voiceHelp">Example: for BEAUTIFUL, say “B — E — A — U — T — I — F — U — L”. You can repeat or correct your attempt before revealing the answer.</p>
 <div class="actions"><button class="primary" id="revealBtn">Reveal Spelling</button></div>
 <div class="answer" id="answerBox"><div class="label">Correct spelling</div><div class="correctword" id="correctWord"></div><div class="result" id="resultText"></div>
 <div class="actions"><button class="success" id="correctBtn">✓ I Got It Right</button><button class="danger" id="wrongBtn">✗ I Got It Wrong</button></div>
@@ -50,8 +51,8 @@ input{width:100%;font-size:22px;padding:15px;border:2px solid var(--border);bord
 
 <div class="card"><div class="label">Today's progress</div><div class="stats"><div class="stat"><b id="statCorrect">0</b><span>Correct</span></div><div class="stat"><b id="statWrong">0</b><span>Need Practice</span></div><div class="stat"><b id="statPercent">0%</b><span>Score</span></div></div></div>
 
-<div class="card"><details><summary>📚 Today's words</summary><p class="small">The words are hidden until you choose to look. Use this for review.</p><ol class="wordlist" id="wordList"></ol></details></div>
-<div class="card"><div class="label">Study tip</div><p class="small">Say the word aloud, type it from memory, reveal the answer, then say the correct spelling aloud. Words you miss are worth practising again.</p><p class="small" id="savedText"></p></div>
+<div class="card"><details><summary>📚 Review completed words</summary><p class="small">Only words you have already attempted are shown here. Future test answers stay hidden.</p><ol class="wordlist" id="wordList"></ol></details></div>
+<div class="card"><div class="label">Study tip</div><p class="small">Listen carefully, spell each letter aloud, check the letters recognised by the app, then reveal the answer. Words you miss are worth practising again.</p><p class="small" id="savedText"></p></div>
 </div>
 
 <script>
@@ -75,34 +76,26 @@ const todayKey=localDateKey();
 if(state.date!==todayKey){state={date:todayKey,words:makeDailyWords(todayKey),index:0,results:{},typed:""};save();}
 if(typeof state.typed!=="string") state.typed="";
 let currentRevealed=false;
+let recognition=null, listening=false;
 function localDateKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function makeDailyWords(seed){let a=WORD_BANK.slice(),x=hash(seed);for(let i=a.length-1;i>0;i--){x=(Math.imul(x,1664525)+1013904223)>>>0;let j=x%(i+1);[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,10)}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function speak(rate=.85){if(!("speechSynthesis"in window)){alert("Speech is not supported by this browser.");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(state.words[state.index]);u.rate=rate;u.pitch=1;u.lang="en-US";speechSynthesis.speak(u)}
-function render(){
- const i=state.index,w=state.words[i],r=state.results[i],done=Object.keys(state.results).length,c=Object.values(state.results).filter(x=>x.correct).length;
- document.getElementById("dateBadge").textContent=new Date().toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
- document.getElementById("wordNumber").textContent=`Word ${i+1} of 10`;document.getElementById("progressBar").style.width=((i+1)*10)+"%";
- document.getElementById("scoreText").textContent=`${c} / ${done} correct`;document.getElementById("statCorrect").textContent=c;document.getElementById("statWrong").textContent=done-c;document.getElementById("statPercent").textContent=done?Math.round(c/done*100)+"%":"0%";
- state.typed = r ? r.typed : ""; document.getElementById("answerDisplay").textContent=state.typed||"Tap letters below to spell the word"; document.getElementById("answerBox").classList.toggle("show",!!r||currentRevealed);
- document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=r?(r.correct?"Correct! Well done.":"Not quite — practise this spelling."):"";
- document.getElementById("correctBtn").style.display=r?"none":"block";document.getElementById("wrongBtn").style.display=r?"none":"block";document.getElementById("nextBtn").textContent=i===9?"Finish Today's Test →":"Next Word →";
- document.getElementById("wordList").innerHTML=state.words.map(x=>`<li>${x}</li>`).join("");currentRevealed=!!r;
-}
-function reveal(){let typed=(state.typed||"").trim().toLowerCase();if(!typed){alert("Spell the word first, then reveal the answer.");return}let w=state.words[state.index];currentRevealed=true;document.getElementById("answerBox").classList.add("show");document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=typed===w.toLowerCase()?"Your spelling matches the answer!":"Compare your spelling with the correct answer."}
-function mark(correct){state.results[state.index]={correct,typed:state.typed||""};delete state.typed;save();render()}
-function next(){if(!state.results[state.index]){alert("Please reveal the spelling and mark whether you got it right.");return}if(state.index<9){state.index++;save();render();speak()}else{let c=Object.values(state.results).filter(x=>x.correct).length;alert(`Today's spelling test is complete!\n\nScore: ${c}/10 (${c*10}%)\n\nCome back tomorrow for 10 new words.`)}}
+function speak(rate=.85){if(!("speechSynthesis"in window)){alert("Speech playback is not supported by this browser.");return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(state.words[state.index]);u.rate=rate;u.pitch=1;u.lang="en-US";speechSynthesis.speak(u)}
+const LETTER_NAMES={A:["a","ay","eh"],B:["b","bee","be"],C:["c","see","sea"],D:["d","dee"],E:["e","ee"],F:["f","ef","eff"],G:["g","gee","jee"],H:["h","aitch","haitch"],I:["i","eye"],J:["j","jay"],K:["k","kay"],L:["l","el"],M:["m","em"],N:["n","en"],O:["o","oh"],P:["p","pee"],Q:["q","cue","queue"],R:["r","are"],S:["s","ess"],T:["t","tee","tea"],U:["u","you"],V:["v","vee"],W:["w","doubleyou","double-u"],X:["x","ex"],Y:["y","why"],Z:["z","zee","zed"]};
+const tokenToLetter={};Object.entries(LETTER_NAMES).forEach(([l,names])=>names.forEach(n=>tokenToLetter[n.replace(/[^a-z]/g,"")]=l));
+function lettersFromTranscript(transcript){const clean=transcript.toLowerCase().replace(/-/g," ").replace(/[^a-z\s]/g," ").trim();if(!clean)return "";const t=clean.split(/\s+/);let out="";for(let i=0;i<t.length;i++){let x=t[i].replace(/[^a-z]/g,"");if(!x)continue;if(x==="double"&&t[i+1]&&["u","you"].includes(t[i+1].replace(/[^a-z]/g,""))){out+="W";i++;continue}if(tokenToLetter[x]){out+=tokenToLetter[x];continue}if(x.length===1){out+=x.toUpperCase();continue}return null}return out}
+function setVoiceStatus(m,type=""){const e=document.getElementById("voiceStatus");e.textContent=m;e.className="voiceStatus"+(type?" "+type:"")}
+function stopRecognition(){if(recognition&&listening){try{recognition.stop()}catch(e){}}}
+function startRecognition(){if(state.results[state.index])return;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setVoiceStatus("Voice recognition is not available in this browser. Try Safari and allow microphone access. If unavailable, use iPhone keyboard dictation as a fallback.","error");return}if(listening){stopRecognition();return}recognition=new SR();recognition.lang="en-US";recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=1;let heard=false;recognition.onstart=()=>{listening=true;document.getElementById("micBtn").textContent="⏹ Stop Listening";setVoiceStatus("Listening… say each letter clearly, with a short pause between letters.")};recognition.onresult=e=>{let chunks=[];for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)chunks.push(e.results[i][0].transcript);if(!chunks.length)return;heard=true;const transcript=chunks.join(" "),letters=lettersFromTranscript(transcript);if(letters===null){setVoiceStatus('I heard “'+transcript+'”, but could not safely interpret every part as letter names. Clear and try again, saying each letter separately.',"error");return}state.typed=(state.typed||"")+letters.toLowerCase();save();updateAnswerDisplay();setVoiceStatus("Letters captured. Check the display; continue speaking or stop listening.","good")};recognition.onerror=e=>{listening=false;document.getElementById("micBtn").textContent="🎤 Start Spelling";const m=e.error==="not-allowed"?"Microphone access was denied. Allow microphone access in browser settings.":e.error==="no-speech"?"No speech detected. Tap the microphone and try again.":"Voice recognition issue ("+e.error+"). Please try again.";setVoiceStatus(m,"error")};recognition.onend=()=>{listening=false;document.getElementById("micBtn").textContent="🎤 Start Spelling";if(heard)setVoiceStatus("Listening stopped. Check your spelling before revealing the answer.","good")};try{recognition.start()}catch(e){setVoiceStatus("Could not start listening. Please try again.","error")}}
+function render(){const i=state.index,w=state.words[i],r=state.results[i],done=Object.keys(state.results).length,c=Object.values(state.results).filter(x=>x.correct).length;document.getElementById("dateBadge").textContent=new Date().toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});document.getElementById("wordNumber").textContent=`Word ${i+1} of 10`;document.getElementById("progressBar").style.width=((i+1)*10)+"%";document.getElementById("scoreText").textContent=`${c} / ${done} correct`;document.getElementById("statCorrect").textContent=c;document.getElementById("statWrong").textContent=done-c;document.getElementById("statPercent").textContent=done?Math.round(c/done*100)+"%":"0%";state.typed=r?r.typed:(state.typed||"");document.getElementById("answerDisplay").textContent=state.typed?state.typed.toUpperCase():"Your spoken letters will appear here";document.getElementById("answerBox").classList.toggle("show",!!r||currentRevealed);document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=r?(r.correct?"Correct! Well done.":"Not quite — practise this spelling."):"";document.getElementById("correctBtn").style.display=r?"none":"block";document.getElementById("wrongBtn").style.display=r?"none":"block";document.getElementById("nextBtn").textContent=i===9?"Finish Today's Test →":"Next Word →";const completed=state.words.map((word,index)=>({word,index})).filter(o=>state.results[o.index]);document.getElementById("wordList").innerHTML=completed.map(o=>`<li>${o.word} — ${state.results[o.index].correct?"Correct":"Needs practice"}</li>`).join("")||"<li>No words completed yet.</li>";document.getElementById("micBtn").disabled=!!r;document.getElementById("clearBtn").disabled=!!r;currentRevealed=!!r}
+function updateAnswerDisplay(){document.getElementById("answerDisplay").textContent=state.typed?state.typed.toUpperCase():"Your spoken letters will appear here"}
+function reveal(){stopRecognition();let typed=(state.typed||"").trim().toLowerCase();if(!typed){alert("Please spell the word aloud first, then reveal the answer.");return}let w=state.words[state.index];currentRevealed=true;document.getElementById("answerBox").classList.add("show");document.getElementById("correctWord").textContent=w;document.getElementById("resultText").textContent=typed===w.toLowerCase()?"Your spoken spelling matches the answer!":"Compare the letters you said with the correct answer.";document.getElementById("correctBtn").style.display="block";document.getElementById("wrongBtn").style.display="block"}
+function mark(correct){if(!currentRevealed){alert("Reveal the correct spelling first, then record your result.");return}state.results[state.index]={correct,typed:state.typed||""};save();render()}
+function next(){if(!state.results[state.index]){alert("Please reveal the spelling and mark whether you got it right.");return}if(state.index<9){state.index++;state.typed="";currentRevealed=false;save();render();speak()}else{let c=Object.values(state.results).filter(x=>x.correct).length;alert(`Today's spelling test is complete!\n\nScore: ${c}/10 (${c*10}%)\n\nCome back tomorrow for 10 new words.`)}}
 document.getElementById("speakBtn").onclick=()=>speak(.85);document.getElementById("slowBtn").onclick=()=>speak(.55);document.getElementById("revealBtn").onclick=reveal;document.getElementById("correctBtn").onclick=()=>mark(true);document.getElementById("wrongBtn").onclick=()=>mark(false);document.getElementById("nextBtn").onclick=next;
-const keyboard=document.getElementById("spellingKeyboard");
-"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(letter=>{
-  const b=document.createElement("button"); b.type="button"; b.textContent=letter;
-  b.onclick=()=>{ if(state.results[state.index]) return; state.typed=(state.typed||"")+letter.toLowerCase(); updateAnswerDisplay(); };
-  keyboard.appendChild(b);
-});
-function updateAnswerDisplay(){document.getElementById("answerDisplay").textContent=state.typed||"Tap letters below to spell the word";}
-document.getElementById("backspaceBtn").onclick=()=>{if(state.results[state.index])return;state.typed=(state.typed||"").slice(0,-1);updateAnswerDisplay()};
-document.getElementById("clearBtn").onclick=()=>{if(state.results[state.index])return;state.typed="";updateAnswerDisplay()};
+document.getElementById("micBtn").onclick=startRecognition;
+document.getElementById("clearBtn").onclick=()=>{if(state.results[state.index])return;stopRecognition();state.typed="";save();updateAnswerDisplay();setVoiceStatus("Answer cleared. Tap the microphone to try again.")};
 render();
 </script>
 </body>
